@@ -50,7 +50,6 @@ validate = CERT_REQUIRED
 
 import configparser
 import os
-import sys
 import ldap3
 from ldap3.core.exceptions import LDAPExceptionError
 import ssl
@@ -62,24 +61,23 @@ def get_class():
 
 class LDAPAuthenticator(object):
     def __init__(self):
+        conf_dir = os.path.dirname(os.path.abspath(__file__))
         conf = configparser.ConfigParser()
-        conf.read(os.path.join(sys.path[0], "ldap.conf"))
+        conf.read(os.path.join(conf_dir, "ldap.conf"))
 
         conf_main = conf["main"]
         self.ldap_version = conf_main.getint("version", 3)
         self.ldap_server = conf_main.get("server", "example.org")
         self.ldap_dn = conf_main.get("dn", "cn={user},dc=example,dc=org")
 
-        self.use_ssl = True
-        self.ssl_validate = ssl.CERT_REQUIRED
-        if conf_main.getboolean("use_ssl", True):
+        self.use_ssl = False
+        self.ssl_validate = ssl.CERT_NONE
+        if conf_main.getboolean("use_ssl", False):
             conf_ssl = conf["ssl"]
             self.ssl_validate = {"CERT_NONE": ssl.CERT_NONE,
                                  "CERT_OPTIONAL": ssl.CERT_OPTIONAL,
                                  "CERT_REQUIRED": ssl.CERT_REQUIRED
-                                 }.get(conf_ssl.getboolean("validate", "CERT_REQUIRED"))
-        else:
-            self.use_ssl = False
+                                 }.get(conf_ssl.getboolean("validate", "CERT_NONE"))
 
     def valid_user(self, username, plain_password):
         try:
