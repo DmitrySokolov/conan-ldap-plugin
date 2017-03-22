@@ -1,4 +1,4 @@
-#!/usr/bin/evn python3
+#!/usr/bin/env python
 # coding: utf-8
 
 """LDAP authentication plugin for conan package manager
