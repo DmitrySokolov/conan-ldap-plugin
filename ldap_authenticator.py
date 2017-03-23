@@ -50,6 +50,7 @@ validate = CERT_REQUIRED
 
 import configparser
 import os
+import re
 import ldap3
 from ldap3.core.exceptions import LDAPExceptionError
 import ssl
@@ -83,9 +84,20 @@ class LDAPAuthenticator(object):
         try:
             tls_conf = ldap3.Tls(validate=self.ssl_validate) if self.use_ssl else None
             server = ldap3.Server(self.ldap_server, use_ssl=self.use_ssl, tls=tls_conf)
-            uid = self.ldap_dn.format(user=username)
-            ldap3.Connection(server, user=uid, password=plain_password, version=self.ldap_version,
-                             auto_bind=True, read_only=True)
+            #  Pass `username` as is
+            if self.try_connect(server, username, plain_password):
+                return True
+            #  Replace capitalized letters in `username` with ".L", e.g. "UserName" -> "User.Name"
+            if self.try_connect(server, re.sub(r"(?<!^)([A-Z])", r".\1", username), plain_password):
+                return True
+        except LDAPExceptionError:
+            pass
+        return False
+
+    def try_connect(self, server, username, password):
+        try:
+            ldap3.Connection(server, user=self.ldap_dn.format(user=username), password=password,
+                             version=self.ldap_version, auto_bind=True, read_only=True)
         except LDAPExceptionError:
             return False
         return True
